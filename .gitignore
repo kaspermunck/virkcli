@@ -1,0 +1,7 @@
+.env
+dist/
+/virkcli
+.claude/MEMORY.md
+.claude/memory/
+.claude/settings.json
+.claude/settings.local.json
