@@ -98,3 +98,21 @@ Every subcommand supports three output modes:
 
 - VIRK redacts the Revenue field for consolidated group accounts (koncernregnskaber) for many large A/S filings. When Revenue is missing but other fields populated, that's an upstream data quirk, not a `virkcli` bug.
 - Person names in Denmark are not unique. When `virkcli person <name>` returns multiple matches, always confirm the `enhedsNummer` before treating it as authoritative — CVRs are unique, names aren't.
+
+## Acknowledgements
+
+`virkcli` accesses data from [Det Centrale Virksomhedsregister (CVR)](https://datacvr.virk.dk) operated by [Erhvervsstyrelsen](https://erhvervsstyrelsen.dk) (Danish Business Authority). The distribution endpoint at `distribution.virk.dk` is documented at [data.virk.dk](https://data.virk.dk).
+
+`virkcli` is an independent open-source tool and is not affiliated with or endorsed by Erhvervsstyrelsen.
+
+When publishing work derived from CVR data, credit the source:
+
+> Kilde: CVR / Erhvervsstyrelsen
+
+### Personal data note
+
+CVR exposes personal data about company officers, beneficial owners (reelle ejere), and founders. This is by design — CVR is a public registry — but the data is still personal data under the GDPR. If you process it programmatically, observe the principles of necessity and proportionality, and consult Erhvervsstyrelsen's [distribution terms](https://data.virk.dk) before bulk or commercial reuse.
+
+## License
+
+This software is released under the [MIT License](LICENSE). CVR data is published by Erhvervsstyrelsen under separate terms (see [data.virk.dk](https://data.virk.dk)).
