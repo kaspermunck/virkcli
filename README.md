@@ -11,6 +11,7 @@ CLI for the official Danish [VIRK](https://datacvr.virk.dk) / CVR registry — E
 | `virkcli financials <cvr>` | Annual report figures (revenue, profit, equity, assets) extracted from XBRL filings |
 | `virkcli person <name>` | Search persons by name; look up roles by `enhedsNummer` |
 | `virkcli punit <p-number>` | Production unit lookup; list P-units for a CVR |
+| `virkcli ejer <cvr>` | Reverse ownership: companies in which this CVR is registered as deltager (owner, stifter, board member, auditor) |
 
 Financial data is extracted from XBRL filings. PDF-only annual reports (common for banks, IFRS reporters, older filings) are listed but figures are not extracted — they appear as rows with a `*` marker and empty value columns.
 
@@ -78,6 +79,9 @@ virkcli person --id 4000123456
 
 # Production units for a CVR
 virkcli punit --cvr 24256790
+
+# Reverse ownership — what does this CVR own / sit on the board of?
+virkcli ejer 36930144 --active-only
 
 # JSON output for downstream tooling
 virkcli lookup 24256790 --json

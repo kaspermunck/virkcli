@@ -7,7 +7,7 @@ description: >
   members, annual reports, or any data originating from VIRK / CVR / Erhvervsstyrelsen.
   Examples: "look up CVR 36945745", "who owns Lunar Bank", "what did LWOH earn last year",
   "find fintech companies in Copenhagen", "what boards does Ken Villum Klausen sit on",
-  "production units under CVR 39697696".
+  "production units under CVR 39697696", "what companies does LWOH own shares in".
 tools: [Bash]
 ---
 
@@ -37,6 +37,7 @@ Classify the user's input first, then dispatch:
 | 10-digit P-number (production unit) | `virkcli punit <pNummer>` |
 | "P-units / locations for this CVR" | `virkcli punit --cvr <cvr>` |
 | Annual-report figures (revenue, equity, profit) | `virkcli financials <cvr>` |
+| "What companies does this CVR own / sit on the board of?" | `virkcli ejer <cvr>` |
 
 If the input is ambiguous ("Lunar" — a company or a person?), default to
 `search` first, then follow up with `lookup` on the best-matching CVR.
@@ -102,6 +103,19 @@ Use this to build out someone's business footprint across every company they
 have any registered role in (founder, owner, director, board member, chair,
 auditor).
 
+### `ejer` — reverse ownership / role lookup
+
+```bash
+virkcli ejer <cvr> [--active-only] [--limit N] [--json] [--raw]
+```
+
+Lists every company in which `<cvr>` appears as a deltager — owner, stifter,
+board member, or auditor. The CVR system records each relation on the *owned*
+company's record, so a holding company's portfolio (or an audit firm's client
+list) is otherwise invisible. Use this any time the user asks "what does this
+company own" or "what boards / clients is this firm on". Output columns: CVR,
+name, role, ownership %, active. `--active-only` filters out ended relations.
+
 ### `punit` — production units (P-enheder)
 
 ```bash
@@ -145,6 +159,11 @@ virkcli lookup <cvr>      # drill into the parent
 **5. Historical financial trend for a company.**
 ```bash
 virkcli financials <cvr> --all
+```
+
+**6. Map a holding company's portfolio (reverse ownership).**
+```bash
+virkcli ejer <cvr> --active-only   # current portfolio + board seats + audits
 ```
 
 ## Global flags (present on every command)

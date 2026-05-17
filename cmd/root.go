@@ -12,7 +12,7 @@ var rootCmd = &cobra.Command{
 	Long: `CLI for querying Danish company data via the official VIRK API
 (Erhvervsstyrelsen / CVR).
 
-Commands: lookup, search, financials, person, punit.
+Commands: lookup, search, financials, person, punit, ejer.
 
 Financial data is extracted from XBRL filings. PDF-only annual reports (common
 for banks, IFRS reporters, and older filings) are recognised and listed but
