@@ -14,16 +14,25 @@ import (
 const financialsBase = "http://distribution.virk.dk/offentliggoerelser/_search"
 
 // Financials holds the key figures extracted from a VIRK annual report (XBRL/iXBRL).
-// For PDF-only filings, PDFOnly is true and the numeric fields are nil.
+// For PDF-only filings, PDFOnly is true, the numeric fields are nil, and PDFs lists
+// every PDF annual-report filing available for this CVR (newest first).
 type Financials struct {
-	CVR           string `json:"cvr"`
+	CVR           string       `json:"cvr"`
+	FiscalYearEnd string       `json:"fiscalYearEnd,omitempty"`
+	PDFOnly       bool         `json:"pdfOnly,omitempty"`
+	Revenue       *int64       `json:"revenue,omitempty"`
+	GrossProfit   *int64       `json:"grossProfit,omitempty"`
+	Profit        *int64       `json:"profit,omitempty"`
+	Equity        *int64       `json:"equity,omitempty"`
+	Assets        *int64       `json:"assets,omitempty"`
+	PDFs          []PDFFiling  `json:"pdfs,omitempty"`
+}
+
+// PDFFiling is the locator for a single PDF-format AARSRAPPORT.
+type PDFFiling struct {
 	FiscalYearEnd string `json:"fiscalYearEnd,omitempty"`
-	PDFOnly       bool   `json:"pdfOnly,omitempty"`
-	Revenue       *int64 `json:"revenue,omitempty"`
-	GrossProfit   *int64 `json:"grossProfit,omitempty"`
-	Profit        *int64 `json:"profit,omitempty"`
-	Equity        *int64 `json:"equity,omitempty"`
-	Assets        *int64 `json:"assets,omitempty"`
+	Published     string `json:"published,omitempty"`
+	URL           string `json:"url"`
 }
 
 // fsaFields maps field names to their XBRL tag local names (FSA namespace preferred, IFRS fallback).
@@ -71,11 +80,39 @@ func (c *Client) FinancialsAll(cvr string) ([]*Financials, error) {
 }
 
 func (c *Client) financialsForYear(cvr string, year int) (*Financials, error) {
-	filing, err := c.pickFiling(cvr, year)
+	filings, err := c.fetchAnnualReports(cvr)
 	if err != nil {
 		return nil, err
 	}
-	return c.financialsFromFiling(cvr, filing)
+	filing, err := pickFromFilings(cvr, filings, year)
+	if err != nil {
+		return nil, err
+	}
+	fin, err := c.financialsFromFiling(cvr, filing)
+	if err != nil {
+		return nil, err
+	}
+	if fin.PDFOnly {
+		fin.PDFs = collectPDFs(filings)
+	}
+	return fin, nil
+}
+
+func collectPDFs(filings []map[string]any) []PDFFiling {
+	var out []PDFFiling
+	for _, f := range filings {
+		url := pdfURL(f)
+		if url == "" {
+			continue
+		}
+		published, _ := f["offentliggoerelsesTidspunkt"].(string)
+		out = append(out, PDFFiling{
+			FiscalYearEnd: filingFiscalYearEnd(f),
+			Published:     published,
+			URL:           url,
+		})
+	}
+	return out
 }
 
 // FinancialsRaw returns the raw filing metadata JSON and XBRL document bytes for
@@ -113,6 +150,10 @@ func (c *Client) pickFiling(cvr string, year int) (map[string]any, error) {
 	if err != nil {
 		return nil, err
 	}
+	return pickFromFilings(cvr, filings, year)
+}
+
+func pickFromFilings(cvr string, filings []map[string]any, year int) (map[string]any, error) {
 	if len(filings) == 0 {
 		return nil, fmt.Errorf("no annual report found for CVR %s", cvr)
 	}
@@ -166,6 +207,37 @@ func (c *Client) financialsFromFiling(cvr string, filing map[string]any) (*Finan
 	fin.FiscalYearEnd = fiscalYearEnd
 
 	return fin, nil
+}
+
+// FinancialsPDFs returns every PDF AARSRAPPORT for a CVR, newest first.
+// `year != 0` filters to the filing whose fiscal-year end falls in that calendar year.
+func (c *Client) FinancialsPDFs(cvr string, year int) ([]PDFFiling, error) {
+	filings, err := c.fetchAnnualReports(cvr)
+	if err != nil {
+		return nil, err
+	}
+	yearStr := ""
+	if year != 0 {
+		yearStr = strconv.Itoa(year)
+	}
+	var out []PDFFiling
+	for _, f := range filings {
+		url := pdfURL(f)
+		if url == "" {
+			continue
+		}
+		end := filingFiscalYearEnd(f)
+		if yearStr != "" && !strings.HasPrefix(end, yearStr) {
+			continue
+		}
+		published, _ := f["offentliggoerelsesTidspunkt"].(string)
+		out = append(out, PDFFiling{
+			FiscalYearEnd: end,
+			Published:     published,
+			URL:           url,
+		})
+	}
+	return out, nil
 }
 
 // fetchAnnualReports returns every AARSRAPPORT filing for a CVR, sorted newest-first.
@@ -242,6 +314,26 @@ func xbrlURL(filing map[string]any) string {
 		}
 		mime, _ := doc["dokumentMimeType"].(string)
 		if strings.Contains(mime, "xml") || strings.Contains(mime, "html") {
+			if url, ok := doc["dokumentUrl"].(string); ok && url != "" {
+				return url
+			}
+		}
+	}
+	return ""
+}
+
+func pdfURL(filing map[string]any) string {
+	docs, ok := filing["dokumenter"].([]any)
+	if !ok {
+		return ""
+	}
+	for _, d := range docs {
+		doc, ok := d.(map[string]any)
+		if !ok {
+			continue
+		}
+		mime, _ := doc["dokumentMimeType"].(string)
+		if strings.Contains(mime, "pdf") {
 			if url, ok := doc["dokumentUrl"].(string); ok && url != "" {
 				return url
 			}

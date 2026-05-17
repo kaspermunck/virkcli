@@ -14,7 +14,7 @@ A CLI for querying Danish company data via the official VIRK API.
 ```
 virkcli lookup <cvr>        # company detail (deltagere, address, industry, contacts)
 virkcli search <query>      # fuzzy company search (--city, --active, --limit)
-virkcli financials <cvr>    # annual report figures from XBRL (--year, --all); PDF-only filings listed but not extracted
+virkcli financials <cvr>    # annual report figures from XBRL (--year, --all); PDF-only filings listed with URLs (--url, --open)
 virkcli person <name>       # deltager search; --id <enhedsNummer> for detail + --active
 virkcli punit <pNr>         # production unit detail; --cvr to list a company's P-units
 virkcli ejer <cvr>          # reverse ownership: companies where <cvr> is registered as deltager (--active-only)

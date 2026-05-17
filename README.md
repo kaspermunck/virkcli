@@ -13,7 +13,7 @@ CLI for the official Danish [VIRK](https://datacvr.virk.dk) / CVR registry — E
 | `virkcli punit <p-number>` | Production unit lookup; list P-units for a CVR |
 | `virkcli ejer <cvr>` | Reverse ownership: companies in which this CVR is registered as deltager (owner, stifter, board member, auditor) |
 
-Financial data is extracted from XBRL filings. PDF-only annual reports (common for banks, IFRS reporters, older filings) are listed but figures are not extracted — they appear as rows with a `*` marker and empty value columns.
+Financial data is extracted from XBRL filings. PDF-only annual reports (common for banks, IFRS reporters, older filings) are listed but figures are not extracted — they appear as rows with a `*` marker and empty value columns. For PDF-only companies, the default `financials <cvr>` output now lists every PDF filing's download URL; use `--url` to print only the latest URL (or combine with `--year`) and `--open` to launch it in the browser.
 
 ## Install
 

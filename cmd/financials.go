@@ -3,6 +3,8 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"os/exec"
+	"runtime"
 
 	"github.com/kaspermunck/virkcli/virk"
 	"github.com/spf13/cobra"
@@ -15,6 +17,8 @@ var (
 	financialsEnvelope bool
 	financialsYear     int
 	financialsAll      bool
+	financialsOpen     bool
+	financialsURL      bool
 )
 
 var financialsCmd = &cobra.Command{
@@ -38,6 +42,10 @@ Use --all to see the full filing history — PDF-only years are marked with *.`,
 			return err
 		}
 		cvr := args[0]
+
+		if financialsURL || financialsOpen {
+			return runPDFAction(client, cvr, financialsYear, financialsOpen)
+		}
 
 		switch {
 		case financialsAll && financialsRaw:
@@ -102,7 +110,47 @@ func validateFinancialsFlags() error {
 	if financialsRaw && financialsRawXBRL {
 		return fmt.Errorf("--raw and --raw-xbrl are mutually exclusive")
 	}
+	if financialsURL && financialsOpen {
+		return fmt.Errorf("--url and --open are mutually exclusive")
+	}
+	if (financialsURL || financialsOpen) && financialsAll {
+		return fmt.Errorf("--url/--open target a single filing; combine with --year, not --all")
+	}
 	return nil
+}
+
+func runPDFAction(client *virk.Client, cvr string, year int, openIt bool) error {
+	pdfs, err := client.FinancialsPDFs(cvr, year)
+	if err != nil {
+		return err
+	}
+	if len(pdfs) == 0 {
+		if year != 0 {
+			return fmt.Errorf("no PDF annual report found for CVR %s with fiscal year ending in %d", cvr, year)
+		}
+		return fmt.Errorf("no PDF annual report found for CVR %s", cvr)
+	}
+	url := pdfs[0].URL
+	if openIt {
+		return openURL(url)
+	}
+	fmt.Fprintln(os.Stdout, url)
+	return nil
+}
+
+func openURL(url string) error {
+	var c *exec.Cmd
+	switch runtime.GOOS {
+	case "darwin":
+		c = exec.Command("open", url)
+	case "linux":
+		c = exec.Command("xdg-open", url)
+	case "windows":
+		c = exec.Command("rundll32", "url.dll,FileProtocolHandler", url)
+	default:
+		return fmt.Errorf("--open is not supported on %s; use --url and pipe to your browser", runtime.GOOS)
+	}
+	return c.Start()
 }
 
 func init() {
@@ -112,6 +160,8 @@ func init() {
 	financialsCmd.Flags().IntVar(&financialsYear, "year", 0, "pick the AARSRAPPORT whose fiscal year ends in this calendar year (e.g. --year 2024)")
 	financialsCmd.Flags().BoolVar(&financialsAll, "all", false, "list every annual report (XBRL figures extracted; PDF-only filings marked with *)")
 	financialsCmd.Flags().BoolVar(&financialsEnvelope, "envelope", false, "emit the shared envelope (Kind=Financials or FinancialsHistory with --all)")
+	financialsCmd.Flags().BoolVar(&financialsOpen, "open", false, "open the latest PDF annual report in the default browser (combine with --year to pick a specific year)")
+	financialsCmd.Flags().BoolVar(&financialsURL, "url", false, "print only the latest PDF annual report URL (combine with --year to pick a specific year)")
 	rootCmd.AddCommand(financialsCmd)
 }
 
@@ -121,7 +171,14 @@ func printFinancials(f *virk.Financials) {
 		fmt.Fprintf(os.Stdout, "  Fiscal year end:  %s\n", f.FiscalYearEnd)
 	}
 	if f.PDFOnly {
-		fmt.Fprintln(os.Stdout, "\n  Annual report is PDF-only — no XBRL data available for extraction.")
+		fmt.Fprintln(os.Stdout, "\nNo structured (XBRL) financial data available.")
+		if len(f.PDFs) > 0 {
+			fmt.Fprintln(os.Stdout, "\nPDF filings found:")
+			for _, p := range f.PDFs {
+				fmt.Fprintf(os.Stdout, "  %s  %s\n", p.FiscalYearEnd, p.URL)
+			}
+			fmt.Fprintln(os.Stdout, "\nUse --open to open the latest PDF in your browser, or --url to print just the URL.")
+		}
 		return
 	}
 	printField("Revenue", f.Revenue)

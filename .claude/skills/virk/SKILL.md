@@ -76,15 +76,18 @@ virkcli financials <cvr> --all        # full filing history (XBRL + PDF-only)
 virkcli financials <cvr> --json
 virkcli financials <cvr> --raw        # JSON metadata of filings found
 virkcli financials <cvr> --raw-xbrl   # dump raw XBRL document
+virkcli financials <cvr> --url        # print latest PDF annual report URL (combine with --year)
+virkcli financials <cvr> --open       # open latest PDF annual report in default browser
 ```
 
 Fields extracted: fiscalYearEnd, revenue, grossProfit, profit, equity, assets.
 All amounts are DKK. Figures are extracted from XBRL filings only. **PDF-only
-filings** (common for banks, IFRS reporters, and older filings) are listed in
-the output but have no extracted figures — `--all` marks them with `*`, and
-`--json` sets `"pdfOnly": true`. Values are filtered to the non-dimensioned
-context matching the filing's fiscal-year end, so equity/assets do not
-double-count per-component breakdowns.
+filings** (common for banks, IFRS reporters, and older filings) cannot be
+extracted, but their URLs *are* surfaced: the default print for a PDF-only
+company lists every PDF filing with its fiscal-year end and download URL, and
+`--json` includes a `pdfs[]` array. `--all` marks PDF-only years with `*`.
+Values are filtered to the non-dimensioned context matching the filing's
+fiscal-year end, so equity/assets do not double-count per-component breakdowns.
 
 ### `person` — deltager lookups
 
@@ -200,7 +203,9 @@ first to confirm.
 **`financials --all` shows all dashes for some years** — those years are
 PDF-only filings (marked with `*`). Figures cannot be extracted from PDFs.
 This is common for banks, IFRS reporters, and older filings. Note this to the
-user and mention which years do have XBRL data.
+user and mention which years do have XBRL data. Offer the PDF URL via
+`virkcli financials <cvr> --url` (most recent) or `--url --year <YYYY>` for a
+specific year, or `--open` to launch it in the browser.
 
 **`--year` returns nothing** — the year must be the fiscal-year *end* calendar
 year, not the accounting period start. E.g. fiscal year 2024-07-01 to
